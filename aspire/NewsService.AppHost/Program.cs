@@ -1,17 +1,20 @@
+using NewsService.AppHost;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
-var minioContainer = builder.AddContainer("minio", "minio/minio")
-    .WithHttpEndpoint(port: 9000, name: "minio-container-port", targetPort: 9000)
-    .WithHttpEndpoint(port: 9001, name: "minio-console-port", targetPort:9001)
-    .WithEnvironment("MINIO_ROOT_USER", "minio")
-    .WithEnvironment("MINIO_ROOT_PASSWORD", "RunningZebraMan32332#")
-    .WithEnvironment("MINIO_ADDRESS", ":9000")
-    .WithEnvironment("MINIO_CONSOLE_ADDRESS", ":9001")
-    .WithArgs("server", "/data");
+var minioContainer = builder.AddMinioEngine("minio");
 
+var minioContainerEndpoint = minioContainer.GetEndpoint("minio-container-port");
+
+var minioAccessKey = builder.AddParameter("minioAccessKey", secret: true);
+var minioSecretKey = builder.AddParameter("minioSecretKey", secret: true);
 builder.AddProject<Projects.NewsService_Api>("newsapi")
+    .WithEnvironment("MINIO_ACCESS_KEY", minioAccessKey)
+    .WithEnvironment("MINIO_SECRET_KEY", minioSecretKey)
+    .WithExternalHttpEndpoints()
+    .WithReference(minioContainer)
     .WaitFor(minioContainer);
-    //.WithHttpsHealthCheck("/health");
-    //.WithHttpHealthCheck("/health");
+//.WithHttpsHealthCheck("/health");
+//.WithHttpHealthCheck("/health");
 
 builder.Build().Run();
