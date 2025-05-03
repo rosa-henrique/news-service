@@ -1,32 +1,31 @@
 using Grpc.Core;
-using Minio;
-using Minio.DataModel.Args;
-using NewsService.Api;
+using System;
+using Amazon;
+using Amazon.S3;
+using Amazon.S3.Model;
 
 namespace NewsService.Api.Services;
 
-public class ObjectStorageService(IMinioClient minioClient) : ObjectStorage.ObjectStorageBase
+public class ObjectStorageService(IAmazonS3 client) : ObjectStorage.ObjectStorageBase
 {
     public override async Task<GetPreSignedUrlResponse> GetPreSignedUrl(GetPreSignedUrlRequest request,
         ServerCallContext context)
     {
         var objectKey = $"{Guid.NewGuid()}.txt";
-        // var getPreSignedUrlRequest = new Amazon.S3.Model.GetPreSignedUrlRequest()
-        // {
-        //     BucketName = "temporary",
-        //     Key = objectKey,
-        //     Expires = DateTime.UtcNow.AddMinutes(15),
-        //     Verb = HttpVerb.GET,
-        // };
-        var presignedGetObjectArgs = new PresignedPutObjectArgs()
-                                                .WithBucket("temporary")
-                                                .WithObject(objectKey)
-                                                .WithExpiry(604800) ;
-        var presignedGetObjectAsync = await minioClient.PresignedPutObjectAsync(presignedGetObjectArgs);
+
+        var presignedGetObjectArgs = new Amazon.S3.Model.GetPreSignedUrlRequest
+        {
+            Key = objectKey,
+            BucketName = "temporary",
+            Verb = HttpVerb.PUT,
+            Expires = DateTime.UtcNow.AddMinutes(15),
+        };
+        
+        var presignedGetObjectAsync = await client.GetPreSignedURLAsync(presignedGetObjectArgs);
 
         return new GetPreSignedUrlResponse
         {
-            Url = presignedGetObjectAsync,
+            Url = presignedGetObjectAsync.Replace("https", "http"),
             Key = objectKey
         };
     }

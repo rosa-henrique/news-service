@@ -1,4 +1,6 @@
-using Minio;
+//using Minio;
+
+using Amazon.S3;
 using NewsService.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,11 +14,16 @@ var minioAccessKey = builder.Configuration.GetValue<string>("MINIO_ACCESS_KEY");
 var minioSecretKey = builder.Configuration.GetValue<string>("MINIO_SECRET_KEY");
 var minioConnectionString = builder.Configuration.GetConnectionString("minio");
 
-builder.Services.AddMinio(configureClient => configureClient
-    .WithEndpoint(new Uri(minioConnectionString))
-    .WithCredentials(minioAccessKey, minioSecretKey)
-    .WithSSL(false)
-    .Build());
+builder.Services.AddScoped<IAmazonS3>(_ =>
+{
+    var s3Config = new AmazonS3Config
+    {
+        ServiceURL = minioConnectionString, // MinIO URL
+        ForcePathStyle = true // Required for MinIO compatibility,
+    };
+
+    return new AmazonS3Client(minioAccessKey, minioSecretKey, s3Config);
+});
 
 var app = builder.Build();
 

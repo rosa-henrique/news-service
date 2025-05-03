@@ -11,7 +11,9 @@ service ObjectStorage {
 }
 
 // The request message containing the user's name.
-message GetPreSignedUrlRequest { }
+message GetPreSignedUrlRequest {
+  string contentType = 1;
+}
 
 // The response message containing the greetings.
 message GetPreSignedUrlResponse {
