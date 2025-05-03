@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsService.ServiceDefaults
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsService.Api", "src\NewsService.Api\NewsService.Api.csproj", "{4BB792BD-D18F-4273-AE37-425170C0A10E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsService.Web", "src\NewsService.Web\NewsService.Web.csproj", "{DC44B9A2-8C38-4498-9832-14DB7B9984C1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,6 +21,7 @@ Global
 		{31040697-15B9-4B76-A831-80C2FD783E73} = {8B187392-B927-43A5-873E-D338034C961E}
 		{7B18CAFD-9DB7-4EFC-8FAA-CD8886469073} = {8B187392-B927-43A5-873E-D338034C961E}
 		{4BB792BD-D18F-4273-AE37-425170C0A10E} = {13F2705F-B63D-4D03-8EA2-7AC5554D9547}
+		{DC44B9A2-8C38-4498-9832-14DB7B9984C1} = {13F2705F-B63D-4D03-8EA2-7AC5554D9547}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{31040697-15B9-4B76-A831-80C2FD783E73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -33,5 +36,9 @@ Global
 		{4BB792BD-D18F-4273-AE37-425170C0A10E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4BB792BD-D18F-4273-AE37-425170C0A10E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4BB792BD-D18F-4273-AE37-425170C0A10E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DC44B9A2-8C38-4498-9832-14DB7B9984C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC44B9A2-8C38-4498-9832-14DB7B9984C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC44B9A2-8C38-4498-9832-14DB7B9984C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC44B9A2-8C38-4498-9832-14DB7B9984C1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

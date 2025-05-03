@@ -1,0 +1,40 @@
+﻿@page "/"
+@using NewsService.Web.Services
+@rendermode InteractiveServer
+
+@inject ObjectStorageClient ObjectStorageClient
+@inject ObjectStorageService ObjectStorageService
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+
+<InputFile OnChange="@LoadFile"/>
+
+@if (errors.Any())
+{
+    @foreach (var error in errors)
+    {
+        <li>@error</li>
+    }
+}
+
+@code {
+    List<string> errors = [];
+
+    public async Task LoadFile(InputFileChangeEventArgs e)
+    {
+        errors.Clear();
+        var file = e.File;
+
+        if (file == null) return;
+
+        var responsePreSignedUrl = await ObjectStorageClient.GetPreSignedUrl();
+
+        using (var stream = file.OpenReadStream())
+        {
+            await ObjectStorageService.UploadFile(responsePreSignedUrl.Url, file.Name, stream, file.Size);
+        }
+    }
+
+}

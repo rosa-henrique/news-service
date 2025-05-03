@@ -16,6 +16,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\NewsService.Api\NewsService.Api.csproj" />
+      <ProjectReference Include="..\..\src\NewsService.Web\NewsService.Web.csproj" />
     </ItemGroup>
 
 </Project>

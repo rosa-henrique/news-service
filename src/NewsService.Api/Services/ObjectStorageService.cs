@@ -10,18 +10,24 @@ public class ObjectStorageService(IMinioClient minioClient) : ObjectStorage.Obje
     public override async Task<GetPreSignedUrlResponse> GetPreSignedUrl(GetPreSignedUrlRequest request,
         ServerCallContext context)
     {
-        var key = $"{Guid.NewGuid()}.txt";
-        var presignedGetObjectArgs = new PresignedGetObjectArgs()
-            .WithBucket("temporary")
-            .WithObject(key)
-            .WithExpiry(10 * 60);
-        
-        var presignedGetObjectAsync = await minioClient.PresignedGetObjectAsync(presignedGetObjectArgs);
-        
+        var objectKey = $"{Guid.NewGuid()}.txt";
+        // var getPreSignedUrlRequest = new Amazon.S3.Model.GetPreSignedUrlRequest()
+        // {
+        //     BucketName = "temporary",
+        //     Key = objectKey,
+        //     Expires = DateTime.UtcNow.AddMinutes(15),
+        //     Verb = HttpVerb.GET,
+        // };
+        var presignedGetObjectArgs = new PresignedPutObjectArgs()
+                                                .WithBucket("temporary")
+                                                .WithObject(objectKey)
+                                                .WithExpiry(604800) ;
+        var presignedGetObjectAsync = await minioClient.PresignedPutObjectAsync(presignedGetObjectArgs);
+
         return new GetPreSignedUrlResponse
         {
             Url = presignedGetObjectAsync,
-            Key = key
+            Key = objectKey
         };
     }
 }
