@@ -29,11 +29,11 @@
 
         if (file == null) return;
 
-        var responsePreSignedUrl = await ObjectStorageClient.GetPreSignedUrl();
+        var responsePreSignedUrl = await ObjectStorageClient.GetPreSignedUrl(file.ContentType);
 
         using (var stream = file.OpenReadStream())
         {
-            await ObjectStorageService.UploadFile(responsePreSignedUrl.Url, file.Name, stream, file.Size);
+            await ObjectStorageService.UploadFile(responsePreSignedUrl.Url, file.ContentType, stream, file.Size);
         }
     }
 
