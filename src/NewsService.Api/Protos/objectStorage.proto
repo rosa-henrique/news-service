@@ -10,6 +10,7 @@ service ObjectStorage {
   rpc GetPreSignedUrl (GetPreSignedUrlRequest) returns (GetPreSignedUrlResponse);
   rpc GetPreSignedUrlMultiPart (GetPreSignedUrlMultiPartRequest) returns (GetPreSignedUrlMultiPartResponse);
   rpc CompleteUploadMultiPart (CompleteUploadMultiPartRequest) returns (CompleteUploadMultiPartResponse);
+  rpc CancelUploadMultiPart (CancelUploadMultiPartRequest) returns (CancelUploadMultiPartResponse);
 }
 
 // The request message containing the user's name.
@@ -53,4 +54,13 @@ message CompleteUploadMultiPartRequest {
 message CompleteUploadMultiPartResponse {
   string objectUrl = 1;
   int64 fileSize = 2;
+}
+
+message CancelUploadMultiPartRequest {
+  string objectKey = 1;
+  string uploadId = 2;
+}
+
+message CancelUploadMultiPartResponse {
+  
 }

@@ -105,6 +105,8 @@
     private string ErrorMessage = string.Empty;
     private bool _isDragging = false;
     private int _ProgressPercentage = 0;
+    private string _uploadId = string.Empty;
+    private string _objectKey = string.Empty;
     private UploadStatus _uploadStatus = UploadStatus.Ready;
     private CancellationTokenSource _cts = new();
 
@@ -133,6 +135,9 @@
                 .OrderBy(a => a.PartNumber)
                 .Select(a => a.PreSignedUrl)
                 .ToArray();
+
+            _uploadId = response.UploadId;
+            _objectKey = response.ObjectKey;
 
             var (success, indexETag) = await ObjectStorageService.UploadFile(
                 selectedFile.OpenReadStream(maxAllowedSize: MaxSizeMB * 1024 * 1024),
@@ -187,7 +192,7 @@
         }
     }
 
-    private void RemoveFile()
+    private async Task RemoveFile()
     {
         try
         {
@@ -198,6 +203,9 @@
             _ProgressPercentage = 0;
             fileInputKey++;
             OnFileRemoved.InvokeAsync();
+            await ObjectStorageClient.CancelUploadMultiPartAsync(_uploadId, _objectKey);
+            _uploadId = string.Empty;
+            _objectKey = string.Empty;
             StateHasChanged();
         }
         catch (Exception ex)

@@ -38,6 +38,17 @@ public class ObjectStorageClient(ObjectStorage.ObjectStorageClient client)
 
         await client.CompleteUploadMultiPartAsync(request);
     }
+
+    public async Task CancelUploadMultiPartAsync(string uploadId, string objectKey)
+    {
+        var request = new CancelUploadMultiPartRequest
+        {
+            UploadId = uploadId,
+            ObjectKey = objectKey,
+        };
+
+        await client.CancelUploadMultiPartAsync(request);
+    }
 }
 
 public record GetPreSignedUrlResponse(string Url, string Key);

@@ -7,7 +7,8 @@ using Amazon.S3.Model;
 
 namespace NewsService.Api.Services;
 
-public class ObjectStorageService(IAmazonS3 client, IConfiguration configuration) : ObjectStorage.ObjectStorageBase
+public class ObjectStorageService(IAmazonS3 client, IConfiguration configuration, ILogger<ObjectStorageService> logger)
+    : ObjectStorage.ObjectStorageBase
 {
     private readonly string _bucketTemporary = configuration.GetValue<string>("BUCKET_TEMPORARY")!;
     private const string MetadataKey = "original-filename";
@@ -129,6 +130,56 @@ public class ObjectStorageService(IAmazonS3 client, IConfiguration configuration
         };
     }
 
+    public override async Task<CancelUploadMultiPartResponse> CancelUploadMultiPart(CancelUploadMultiPartRequest request,
+        ServerCallContext context)
+    {
+        var tasks = new List<Task>()
+        {
+            AbortUploadMultiPart(request.UploadId, request.ObjectKey),
+            DeleteFile(request.ObjectKey)
+        };
+
+        await Task.WhenAll(tasks);
+
+        return new CancelUploadMultiPartResponse();
+    }
+
+    private async Task AbortUploadMultiPart(string uploadId, string objectKey)
+    {
+        try
+        {
+            var abortMultipartUploadRequest = new AbortMultipartUploadRequest
+            {
+                BucketName = _bucketTemporary,
+                Key = objectKey,
+                UploadId = uploadId
+            };
+
+            await client.AbortMultipartUploadAsync(abortMultipartUploadRequest);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "error aborting multipart upload");
+        }
+    }
+
+    private async Task DeleteFile(string objectKey)
+    {
+        try
+        {
+            var deleteObjectRequest = new DeleteObjectRequest
+            {
+                BucketName = _bucketTemporary,
+                Key = objectKey,
+            };
+            var a = await client.DeleteObjectAsync(deleteObjectRequest);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "error  deleting file");
+        }
+    }
+
     private string GeneratePresignedUrl(
         string objectKey,
         string uploadId,
@@ -154,7 +205,7 @@ public class ObjectStorageService(IAmazonS3 client, IConfiguration configuration
                 [$"x-amz-meta-{MetadataKey}"] = fileName // Metadado formatado corretamente
             }
         };
-        
+
         return client.GetPreSignedURL(request);
     }
 
