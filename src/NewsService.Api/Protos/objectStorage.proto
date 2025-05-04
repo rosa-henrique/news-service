@@ -8,15 +8,49 @@ package NewsServiceApi;
 service ObjectStorage {
   // Sends a greeting
   rpc GetPreSignedUrl (GetPreSignedUrlRequest) returns (GetPreSignedUrlResponse);
+  rpc GetPreSignedUrlMultiPart (GetPreSignedUrlMultiPartRequest) returns (GetPreSignedUrlMultiPartResponse);
+  rpc CompleteUploadMultiPart (CompleteUploadMultiPartRequest) returns (CompleteUploadMultiPartResponse);
 }
 
 // The request message containing the user's name.
 message GetPreSignedUrlRequest {
   string contentType = 1;
+  string fileName = 2;
+}
+
+message GetPreSignedUrlMultiPartRequest {
+  string fileName = 1;
+  string contentType = 2;
+  int64  fileSize = 3;
 }
 
 // The response message containing the greetings.
 message GetPreSignedUrlResponse {
-  string url = 1;
-  string key = 2;
+  string preSignedUrl = 1;
+  string objectKey = 2;
+}
+
+message GetPreSignedUrlMultiPartResponse {
+  string objectKey = 1;
+  string uploadId = 2;
+  int32 totalParts = 3;
+  int64 partSize = 4;
+  repeated PartUrls partUrls = 5;
+}
+
+message PartUrls {
+  int32 partNumber = 1;
+  string preSignedUrl = 2;
+  int64 partSize = 3;
+}
+
+message CompleteUploadMultiPartRequest {
+  string uploadId = 1;
+  string objectKey = 2;
+  map<int32, string> etags = 3;
+}
+
+message CompleteUploadMultiPartResponse {
+  string objectUrl = 1;
+  int64 fileSize = 2;
 }

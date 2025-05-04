@@ -128,16 +128,27 @@
 
             var progress = new Progress<int>(percent => _ProgressPercentage = percent);
 
-            var responsePreSignedUrl = await ObjectStorageClient.GetPreSignedUrl(selectedFile.ContentType);
+            var response = await ObjectStorageClient.GetPreSignedUrlMultiPart(selectedFile.ContentType, selectedFile.Name, selectedFile.Size);
+            var pressignedUrls = response.PartUrls
+                .OrderBy(a => a.PartNumber)
+                .Select(a => a.PreSignedUrl)
+                .ToArray();
 
-            await ObjectStorageService.UploadFile(
+            var (success, indexETag) = await ObjectStorageService.UploadFile(
                 selectedFile.OpenReadStream(maxAllowedSize: MaxSizeMB * 1024 * 1024),
                 selectedFile.ContentType,
-                responsePreSignedUrl.Url,
+                selectedFile.Name,
+                pressignedUrls,
                 progress,
                 _cts.Token,
-                chunkSize: 5 * 1024 * 1024 // 5MB chunks
+                chunkSize: (int)response.PartSize,
+                totalChunks: response.TotalParts
             );
+
+            if (success)
+            {
+                await ObjectStorageClient.CompleteUploadMultiPart(response.UploadId, response.ObjectKey, indexETag);
+            }
 
             _uploadStatus = UploadStatus.Completed;
             await OnFileUploaded.InvokeAsync(selectedFile);

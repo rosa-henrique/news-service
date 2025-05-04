@@ -8,49 +8,73 @@ public class ObjectStorageService(IHttpClientFactory clientFactor, ILogger<Objec
 {
     private readonly HttpClient _httpClient = clientFactor.CreateClient();
 
-    public async Task<bool> UploadFile(
+    public async Task<(bool, IDictionary<int, string>)> UploadFile(
         Stream fileStream,
         string contentType,
-        string preSignedUrl,
+        string fileName,
+        string[] preSignedUrls,
         IProgress<int> progress = null,
         CancellationToken cancellationToken = default,
-        int chunkSize = 10 * 1024 * 1024,
+        int chunkSize = 10 * 1024 * 1024, // 10MB padrão (mínimo 5MB)
+        int? totalChunks = null,
         int maxRetries = 3)
     {
+        var indexETag = new Dictionary<int, string>();
+
+        // Validação do chunkSize
+        if (chunkSize < 5 * 1024 * 1024)
+            throw new ArgumentException("ChunkSize deve ser pelo menos 5MB");
+
         try
         {
             var fileSize = fileStream.Length;
-            var totalChunks = (int)Math.Ceiling((double)fileSize / chunkSize);
+            totalChunks ??= (int)Math.Ceiling((double)fileSize / chunkSize);
             var uploadedBytes = 0L;
 
-            // Buffer pool para otimizar memória
             var buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
-            
+
             try
             {
                 for (var chunkNumber = 0; chunkNumber < totalChunks; chunkNumber++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    var bytesRead = await fileStream.ReadAsync(buffer, 0, chunkSize, cancellationToken);
-                    var chunkData = new ArraySegment<byte>(buffer, 0, bytesRead);
+                    // Ler EXATAMENTE chunkSize bytes (exceto última parte)
+                    var bytesRead = 0;
+                    var totalRead = 0;
+                    while (totalRead < chunkSize &&
+                           (bytesRead = await fileStream.ReadAsync(
+                               buffer,
+                               totalRead,
+                               chunkSize - totalRead,
+                               cancellationToken)) > 0)
+                    {
+                        totalRead += bytesRead;
+                    }
 
-                    var success = await UploadChunkWithRetryAsync(
+                    var isLastChunk = chunkNumber == totalChunks - 1;
+                    if (!isLastChunk && totalRead < chunkSize)
+                        throw new InvalidOperationException("Não foi possível ler chunk completo");
+
+                    var chunkData = new ArraySegment<byte>(buffer, 0, totalRead);
+
+                    var (success, etag) = await UploadChunkWithRetryAsync(
                         chunkData,
-                        preSignedUrl,
+                        preSignedUrls[chunkNumber],
                         contentType,
-                        uploadedBytes,
-                        fileSize,
                         maxRetries,
+                        fileName,
                         cancellationToken);
 
-                    if (!success) return false;
+                    if (!success) return (false, indexETag);
 
-                    uploadedBytes += bytesRead;
+                    uploadedBytes += totalRead;
                     progress?.Report((int)((double)uploadedBytes / fileSize * 100));
+
+                    indexETag.Add(chunkNumber + 1, etag); // Part numbers começam em 1
                 }
 
-                return true;
+                return (true, indexETag);
             }
             finally
             {
@@ -59,27 +83,27 @@ public class ObjectStorageService(IHttpClientFactory clientFactor, ILogger<Objec
         }
         catch (OperationCanceledException)
         {
-            logger.LogInformation("Upload canceled");
-            return false;
+            logger.LogInformation("Upload cancelado");
+            return (false, indexETag);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Upload error");
-            return false;
+            logger.LogError(ex, "Erro no upload");
+            return (false, indexETag);
         }
     }
-    
-    private async Task<bool> UploadChunkWithRetryAsync(
+
+    private async Task<(bool, string)> UploadChunkWithRetryAsync(
         ArraySegment<byte> chunkData,
         string preSignedUrl,
         string contentType,
-        long offset,
-        long totalSize,
         int maxRetries,
+        string fileName,
         CancellationToken cancellationToken)
     {
         var retryCount = 0;
         var success = false;
+        var eTag = string.Empty;
 
         while (!success && retryCount <= maxRetries)
         {
@@ -88,12 +112,14 @@ public class ObjectStorageService(IHttpClientFactory clientFactor, ILogger<Objec
                 using (var content = new ByteArrayContent(chunkData.Array, chunkData.Offset, chunkData.Count))
                 {
                     // Configurar headers para upload parcial
-                    content.Headers.Add("Content-Range", $"bytes {offset}-{offset + chunkData.Count - 1}/{totalSize}");
+                    content.Headers.Add("x-amz-meta-original-filename", fileName);
                     content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
 
                     var response = await _httpClient.PutAsync(preSignedUrl, content, cancellationToken);
                     response.EnsureSuccessStatusCode();
                     success = true;
+                    var etag = response.Headers.GetValues("ETag");
+                    eTag = etag.FirstOrDefault();
                 }
             }
             catch (Exception ex) when (retryCount < maxRetries)
@@ -104,7 +130,7 @@ public class ObjectStorageService(IHttpClientFactory clientFactor, ILogger<Objec
             }
         }
 
-        return success;
+        return (success, eTag);
     }
 
     private TimeSpan CalculateRetryDelay(int retryCount)
