@@ -2,39 +2,66 @@
 @using NewsService.Web.Services
 @rendermode InteractiveServer
 
-@inject ObjectStorageClient ObjectStorageClient
-@inject ObjectStorageService ObjectStorageService
-
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container mt-4">
+    <EditForm Model="@Model" OnValidSubmit="HandleSubmit">
+        <!-- Outros campos do formulário -->
+        <div class="col-md-6">
+            <label class="form-label">Title*</label>
+            <InputText @bind-Value="Model.Title" class="form-control" />
+            <ValidationMessage For="@(() => Model.Title)" />
+        </div>
 
-<InputFile OnChange="@LoadFile"/>
+        <div class="col-md-6">
+            <label class="form-label">Body*</label>
+            <InputTextArea @bind-Value="Model.Body" class="form-control" />
+            <ValidationMessage For="@(() => Model.Body)" />
+        </div>
+        <FileUpload Label="Document"
+                    AllowedTypes=".pdf,.docx"
+                    MaxSizeMB="25"
+                    OnFileUploaded="HandleFileUpload"
+                    OnFileRemoved="HandleFileRemove" />
 
-@if (errors.Any())
-{
-    @foreach (var error in errors)
-    {
-        <li>@error</li>
-    }
-}
+        <button type="submit" class="btn btn-primary">Enviar</button>
+    </EditForm>
+</div>
 
 @code {
-    List<string> errors = [];
-
-    public async Task LoadFile(InputFileChangeEventArgs e)
+    private FormModel Model = new()
     {
-        errors.Clear();
-        var file = e.File;
+        Title = "News title",
+        Body = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum."
+    };
+    private string presignedUrl = "SUA_URL_AQUI";
 
-        if (file == null) return;
-
-        var responsePreSignedUrl = await ObjectStorageClient.GetPreSignedUrl(file.ContentType);
-
-        using (var stream = file.OpenReadStream())
+    private async Task HandleSubmit()
+    {
+        
+    }
+    private void HandleFileUpload(IBrowserFile uploadedFile)
+    {
+        // Atualizar modelo com informações do arquivo
+        if (uploadedFile != null)
         {
-            await ObjectStorageService.UploadFile(responsePreSignedUrl.Url, file.ContentType, stream, file.Size);
+            Model.FileName = uploadedFile.Name;
+            Model.FileSize = uploadedFile.Size;
         }
     }
 
+    private void HandleFileRemove()
+    {
+        Model.FileName = null;
+        Model.FileSize = 0;
+    }
+
+    private class FormModel
+    {
+        public string FileName { get; set; }
+        public long FileSize { get; set; }
+        public string Title { get; set; }
+        public string Body { get; set; }
+        // ... outros campos
+    }
 }

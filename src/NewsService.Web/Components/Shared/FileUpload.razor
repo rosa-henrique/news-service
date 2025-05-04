@@ -1,0 +1,254 @@
+@using NewsService.Web.Services
+
+@inject ObjectStorageClient ObjectStorageClient
+@inject ObjectStorageService ObjectStorageService
+
+<div class="file-upload-container">
+    <label class="form-label">@Label</label>
+
+    <div class="border rounded-3 p-3 @(_isDragging ? "border-primary bg-light" : "border-secondary")"
+         style="min-height: 120px; position: relative;"
+         @ondragover="HandleDragOver"
+         @ondragleave="HandleDragLeave"
+         @ondrop="HandleDrop">
+
+        <InputFile id="@fileInputId"
+                   class="visually-hidden"
+                   OnChange="HandleFileSelected"
+                   multiple="false"
+                   accept="@AllowedTypes"
+                   @key="fileInputKey"/>
+
+        <label for="@fileInputId" class="stretched-link cursor-pointer">
+            <div class="d-flex flex-column justify-content-center align-items-center h-100 gap-3">
+                @if (_uploadStatus == UploadStatus.Completed)
+                {
+                    <div class="text-center text-success">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="bi bi-check-circle-fill fs-2"></i>
+                            <button type="button"
+                                    class="btn btn-outline-danger btn-sm btn-action"
+                                    @onclick="RemoveFile"
+                                    @onclick:stopPropagation="true"
+                                    @onclick:preventDefault="true"
+                                    title="Remove file">
+                                <i class="bi bi-trash fs-6"></i>
+                            </button>
+                        </div>
+                        <p class="mb-0 mt-2 fw-medium">File uploaded successfully!</p>
+                        <small class="text-muted">@selectedFile?.Name</small>
+                    </div>
+                }
+                else if (_uploadStatus == UploadStatus.Uploading)
+                {
+                    <div class="text-center">
+                        <div class="spinner-border text-primary fs-4" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mb-0 mt-2 fw-medium">@_ProgressPercentage% completed</p>
+                        <button type="button"
+                                class="btn btn-danger btn-sm mt-2 btn-action"
+                                @onclick:stopPropagation="true"
+                                @onclick:preventDefault="true"
+                                @onclick="CancelUpload">
+                            <i class="bi bi-x-circle me-2"></i>Cancel
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center">
+                        <i class="bi bi-cloud-arrow-up fs-1 text-muted"></i>
+                        <p class="mb-0 mt-2 fw-medium">
+                            Drag file here or <span class="text-primary">click to browse</span>
+                        </p>
+                        <small class="text-muted">@FormatAllowedTypes()</small>
+                        <small class="text-muted d-block mt-1">Max size: @MaxSizeMB MB</small>
+                    </div>
+                }
+            </div>
+        </label>
+    </div>
+
+    @if (_uploadStatus == UploadStatus.Error)
+    {
+        <div class="alert alert-danger mt-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    @ErrorMessage
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary me-2" @onclick="RetryUpload">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Retry
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="RemoveFile">
+                        <i class="bi bi-trash me-2"></i>Remove
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string fileInputId = $"fileInput_{Guid.NewGuid()}";
+    private int fileInputKey = 0;
+
+    [Parameter] public string Label { get; set; } = "Anexar Arquivo";
+    [Parameter] public string AllowedTypes { get; set; } = ".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png";
+    [Parameter] public int MaxSizeMB { get; set; } = 50;
+    [Parameter] public EventCallback<IBrowserFile> OnFileUploaded { get; set; }
+    [Parameter] public EventCallback OnFileRemoved { get; set; }
+
+    private IBrowserFile selectedFile;
+    private string ErrorMessage = string.Empty;
+    private bool _isDragging = false;
+    private int _ProgressPercentage = 0;
+    private UploadStatus _uploadStatus = UploadStatus.Ready;
+    private CancellationTokenSource _cts = new();
+
+    private enum UploadStatus
+    {
+        Ready,
+        Uploading,
+        Completed,
+        Error
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            _uploadStatus = UploadStatus.Uploading;
+            selectedFile = e.File;
+            ErrorMessage = string.Empty;
+
+            ValidateFile();
+
+            var progress = new Progress<int>(percent => _ProgressPercentage = percent);
+
+            var responsePreSignedUrl = await ObjectStorageClient.GetPreSignedUrl(selectedFile.ContentType);
+
+            await ObjectStorageService.UploadFile(
+                selectedFile.OpenReadStream(maxAllowedSize: MaxSizeMB * 1024 * 1024),
+                selectedFile.ContentType,
+                responsePreSignedUrl.Url,
+                progress,
+                _cts.Token,
+                chunkSize: 5 * 1024 * 1024 // 5MB chunks
+            );
+
+            _uploadStatus = UploadStatus.Completed;
+            await OnFileUploaded.InvokeAsync(selectedFile);
+        }
+        catch (Exception ex)
+        {
+            _uploadStatus = UploadStatus.Error;
+            ErrorMessage = ex.Message;
+            await OnFileUploaded.InvokeAsync(null);
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private void ValidateFile()
+    {
+        if (selectedFile.Size > MaxSizeMB * 1024 * 1024)
+        {
+            throw new Exception($"Arquivo excede o tamanho máximo de {MaxSizeMB}MB");
+        }
+
+        var fileExtension = Path.GetExtension(selectedFile.Name);
+        if (!AllowedTypes.Split(',').Contains(fileExtension))
+        {
+            throw new Exception($"Tipo de arquivo não permitido: {fileExtension}");
+        }
+    }
+
+    private async Task RetryUpload()
+    {
+        if (selectedFile != null)
+        {
+            await HandleFileSelected(new InputFileChangeEventArgs(new[] { selectedFile }));
+        }
+    }
+
+    private void RemoveFile()
+    {
+        try
+        {
+            _cts?.Cancel();
+            selectedFile = null;
+            _uploadStatus = UploadStatus.Ready;
+            ErrorMessage = string.Empty;
+            _ProgressPercentage = 0;
+            fileInputKey++;
+            OnFileRemoved.InvokeAsync();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao remover arquivo: {ex.Message}");
+        }
+    }
+
+    private void HandleDragOver(DragEventArgs e) => _isDragging = true;
+    private void HandleDragLeave(DragEventArgs e) => _isDragging = false;
+    private void HandleDrop(DragEventArgs e) => _isDragging = false;
+    private void CancelUpload() => RemoveFile();
+
+    private string FormatAllowedTypes()
+    {
+        var types = AllowedTypes.Split(',')
+            .Select(t => t.TrimStart('.').ToUpper())
+            .Distinct();
+        return $"Formatos aceitos: {string.Join(", ", types)}";
+    }
+
+    // ... (métodos HandleDragOver, HandleDragLeave, HandleDrop, RetryUpload, CancelUpload)
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+    }
+
+}
+
+<style scoped>
+    .file-upload-container {
+        margin-bottom: 1.5rem;
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-action {
+        z-index: 2;
+        position: relative;
+        transition: transform 0.2s ease;
+    }
+
+    .btn-action:hover {
+        transform: scale(1.05);
+    }
+
+    .stretched-link::after {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1;
+        content: "";
+    }
+
+    .bi {
+        vertical-align: middle;
+    }
+</style>
