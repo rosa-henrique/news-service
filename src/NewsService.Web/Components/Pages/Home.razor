@@ -1,67 +1,155 @@
 ﻿@page "/"
+@using NewsService.Web.Models
 @using NewsService.Web.Services
 @rendermode InteractiveServer
+@inject NewsClient NewsClient;
 
 <PageTitle>Home</PageTitle>
 
 <div class="container mt-4">
-    <EditForm Model="@Model" OnValidSubmit="HandleSubmit">
+    <EditForm EditContext="_editContext!" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator/>
         <!-- Outros campos do formulário -->
         <div class="col-md-6">
             <label class="form-label">Title*</label>
-            <InputText @bind-Value="Model.Title" class="form-control" />
-            <ValidationMessage For="@(() => Model.Title)" />
+            <InputText @bind-Value="Model!.Title" class="form-control"/>
+            <ValidationMessage For="@(() => Model.Title)"/>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Body*</label>
+            <InputTextArea @bind-Value="Model.Body" class="form-control"/>
+            <ValidationMessage For="@(() => Model.Body)"/>
+        </div>
+        <div class="col-md-6">
+            <FileUpload Label="Document"
+                        AllowedTypes=".pdf"
+                        MaxSizeMB="25"
+                        OnFileUploaded="HandlePdfFileUpload"
+                        OnFileRemoved="HandlePdfFileRemove"/>
+            <ValidationMessage For="@(() => Model.Document)"/>
         </div>
 
         <div class="col-md-6">
-            <label class="form-label">Body*</label>
-            <InputTextArea @bind-Value="Model.Body" class="form-control" />
-            <ValidationMessage For="@(() => Model.Body)" />
+            <FileUpload Label="Image"
+                        AllowedTypes=".jpg,.png,.jpeg"
+                        MaxSizeMB="25"
+                        OnFileUploaded="HandleImageFileUpload"
+                        OnFileRemoved="HandleImageFileRemove"/>
+            <ValidationMessage For="@(() => Model.Image)"/>
         </div>
-        <FileUpload Label="Document"
-                    AllowedTypes=".pdf,.docx,.mp4"
-                    MaxSizeMB="25"
-                    OnFileUploaded="HandleFileUpload"
-                    OnFileRemoved="HandleFileRemove" />
+
+        <div class="col-md-6">
+            <FileUpload Label="Video"
+                        AllowedTypes=".mp4"
+                        MaxSizeMB="1024"
+                        OnFileUploaded="HandleVideoFileUpload"
+                        OnFileRemoved="HandleVideoFileRemove"/>
+            <ValidationMessage For="@(() => Model.Video)"/>
+        </div>
 
         <button type="submit" class="btn btn-primary">Enviar</button>
     </EditForm>
 </div>
 
 @code {
-    private FormModel Model = new()
+    private EditContext? _editContext;
+    private ValidationMessageStore? _messageStore;
+
+    [SupplyParameterFromForm] private NewsFormModel? Model { get; set; }
+
+    FieldIdentifier _fieldIdentifierDocument;
+    FieldIdentifier _fieldIdentifierImage;
+    FieldIdentifier _fieldIdentifierVideo;
+
+    protected override void OnInitialized()
     {
-        Title = "News title",
-        Body = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum."
-    };
-    private string presignedUrl = "SUA_URL_AQUI";
+        Model ??= new()
+        {
+            Title = "News title",
+            Body = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum."
+        };
+        _editContext = new(Model);
+        _messageStore = new ValidationMessageStore(_editContext);
+        _fieldIdentifierDocument = new FieldIdentifier(Model, nameof(Model.Document));
+        _fieldIdentifierImage = new FieldIdentifier(Model, nameof(Model.Image));
+        _fieldIdentifierVideo = new FieldIdentifier(Model, nameof(Model.Video));
+    }
 
     private async Task HandleSubmit()
     {
-        
+        await NewsClient.SaveNews(Model);
     }
-    private void HandleFileUpload(IBrowserFile uploadedFile)
+
+    private void HandlePdfFileUpload(FileUpload.EventCallbackArgs args)
     {
         // Atualizar modelo com informações do arquivo
-        if (uploadedFile != null)
+        if (args?.File != null)
         {
-            Model.FileName = uploadedFile.Name;
-            Model.FileSize = uploadedFile.Size;
+            Model.Document = new NewsFileFormModel
+            {
+                ObjectKey = args.ObjectKey,
+                FileName = args.File.Name
+            };
+            ValidateFiles(_fieldIdentifierDocument, Model.Document);
         }
     }
 
-    private void HandleFileRemove()
+    private void HandlePdfFileRemove()
     {
-        Model.FileName = null;
-        Model.FileSize = 0;
+        Model.Document = null;
+        ValidateFiles(_fieldIdentifierDocument, Model.Document);
     }
 
-    private class FormModel
+    private void HandleImageFileUpload(FileUpload.EventCallbackArgs args)
     {
-        public string FileName { get; set; }
-        public long FileSize { get; set; }
-        public string Title { get; set; }
-        public string Body { get; set; }
-        // ... outros campos
+        // Atualizar modelo com informações do arquivo
+        if (args?.File != null)
+        {
+            Model.Image = new NewsFileFormModel
+            {
+                ObjectKey = args.ObjectKey,
+                FileName = args.File.Name
+            };
+            ValidateFiles(_fieldIdentifierImage, Model.Image);
+        }
     }
+
+    private void HandleImageFileRemove()
+    {
+        Model.Image = null;
+        ValidateFiles(_fieldIdentifierImage, Model.Image);
+    }
+
+    private void HandleVideoFileUpload(FileUpload.EventCallbackArgs args)
+    {
+        // Atualizar modelo com informações do arquivo
+        if (args?.File != null)
+        {
+            Model.Video = new NewsFileFormModel
+            {
+                ObjectKey = args.ObjectKey,
+                FileName = args.File.Name
+            };
+            ValidateFiles(_fieldIdentifierVideo, Model.Video);
+        }
+    }
+
+    private void HandleVideoFileRemove()
+    {
+        Model.Video = null;
+        ValidateFiles(_fieldIdentifierVideo, Model.Video);
+    }
+
+    private void ValidateFiles(FieldIdentifier fieldIdentifier, NewsFileFormModel newsFileFormModel)
+    {
+        _messageStore.Clear(fieldIdentifier);
+
+        if (newsFileFormModel is null)
+        {
+            _messageStore.Add(fieldIdentifier, $"The {fieldIdentifier.FieldName} id required");
+        }
+
+        _editContext.NotifyValidationStateChanged();
+    }
+
 }

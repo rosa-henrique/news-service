@@ -16,7 +16,10 @@ public class ObjectStorageService(IAmazonS3 client, IConfiguration configuration
     private static IDictionary<string, string> _contentTypesToExtensions = new Dictionary<string, string>
     {
         { "application/pdf", "pdf" },
-        { "video/mp4", "mp4" }
+        { "video/mp4", "mp4" },
+        { "image/png", "png" },
+        { "image/jpg", "jpg" },
+        { "image/jpeg", "jpeg" }
     }.ToFrozenDictionary();
 
     public override async Task<GetPreSignedUrlResponse> GetPreSignedUrl(GetPreSignedUrlRequest request,
@@ -47,6 +50,10 @@ public class ObjectStorageService(IAmazonS3 client, IConfiguration configuration
             Expires = DateTime.UtcNow.AddMinutes(15),
             ContentType = request.ContentType,
             Protocol = Protocol.HTTP,
+            Headers =
+            {
+                [$"x-amz-meta-{MetadataKey}"] = request.FileName // Metadado formatado corretamente
+            }
         };
 
         var presignedGetObjectAsync = await client.GetPreSignedURLAsync(presignedGetObjectArgs);
@@ -130,7 +137,8 @@ public class ObjectStorageService(IAmazonS3 client, IConfiguration configuration
         };
     }
 
-    public override async Task<CancelUploadMultiPartResponse> CancelUploadMultiPart(CancelUploadMultiPartRequest request,
+    public override async Task<CancelUploadMultiPartResponse> CancelUploadMultiPart(
+        CancelUploadMultiPartRequest request,
         ServerCallContext context)
     {
         var tasks = new List<Task>()

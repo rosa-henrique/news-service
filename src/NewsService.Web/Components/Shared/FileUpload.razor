@@ -98,7 +98,7 @@
     [Parameter] public string Label { get; set; } = "Anexar Arquivo";
     [Parameter] public string AllowedTypes { get; set; } = ".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png";
     [Parameter] public int MaxSizeMB { get; set; } = 50;
-    [Parameter] public EventCallback<IBrowserFile> OnFileUploaded { get; set; }
+    [Parameter] public EventCallback<EventCallbackArgs> OnFileUploaded { get; set; }
     [Parameter] public EventCallback OnFileRemoved { get; set; }
 
     private IBrowserFile selectedFile;
@@ -130,33 +130,65 @@
 
             var progress = new Progress<int>(percent => _ProgressPercentage = percent);
 
-            var response = await ObjectStorageClient.GetPreSignedUrlMultiPart(selectedFile.ContentType, selectedFile.Name, selectedFile.Size);
-            var pressignedUrls = response.PartUrls
-                .OrderBy(a => a.PartNumber)
-                .Select(a => a.PreSignedUrl)
-                .ToArray();
-
-            _uploadId = response.UploadId;
-            _objectKey = response.ObjectKey;
-
-            var (success, indexETag) = await ObjectStorageService.UploadFile(
-                selectedFile.OpenReadStream(maxAllowedSize: MaxSizeMB * 1024 * 1024),
-                selectedFile.ContentType,
-                selectedFile.Name,
-                pressignedUrls,
-                progress,
-                _cts.Token,
-                chunkSize: (int)response.PartSize,
-                totalChunks: response.TotalParts
-            );
-
-            if (success)
+            if (selectedFile.Size > 5 * 1024 * 1024)
             {
-                await ObjectStorageClient.CompleteUploadMultiPart(response.UploadId, response.ObjectKey, indexETag);
+                var responseMultipart = await ObjectStorageClient.GetPreSignedUrlMultiPart(selectedFile.ContentType, selectedFile.Name, selectedFile.Size);
+                var pressignedUrls = responseMultipart.PartUrls
+                    .OrderBy(a => a.PartNumber)
+                    .Select(a => a.PreSignedUrl)
+                    .ToArray();
+
+                _uploadId = responseMultipart.UploadId;
+                _objectKey = responseMultipart.ObjectKey;
+
+                var (success, indexETag) = await ObjectStorageService.UploadFileMultiPart(
+                    selectedFile.OpenReadStream(maxAllowedSize: MaxSizeMB * 1024 * 1024),
+                    selectedFile.ContentType,
+                    selectedFile.Name,
+                    pressignedUrls,
+                    progress,
+                    _cts.Token,
+                    chunkSize: (int)responseMultipart.PartSize,
+                    totalChunks: responseMultipart.TotalParts
+                );
+
+                if (success)
+                {
+                    await ObjectStorageClient.CompleteUploadMultiPart(responseMultipart.UploadId, responseMultipart.ObjectKey, indexETag);
+                }
+                else
+                {
+                    ErrorMessage = "Error during upload file do S3";
+                }
+            }
+            else
+            {
+                var responseSingleFile = await ObjectStorageClient.GetPreSignedUrl(selectedFile.ContentType, selectedFile.Name);
+
+                var success = await ObjectStorageService.UploadFile(
+                    selectedFile.OpenReadStream(maxAllowedSize: MaxSizeMB * 1024 * 1024),
+                    selectedFile.ContentType,
+                    selectedFile.Name,
+                    responseSingleFile.Url,
+                    progress,
+                    _cts.Token);
+                
+                _objectKey = responseSingleFile.Key;
+                
+                if (!success)
+                {
+                    ErrorMessage = "Error during upload file do S3";
+                }
             }
 
             _uploadStatus = UploadStatus.Completed;
-            await OnFileUploaded.InvokeAsync(selectedFile);
+
+            var eventArgs = new EventCallbackArgs
+            {
+                File = selectedFile,
+                ObjectKey = _objectKey
+            };
+            await OnFileUploaded.InvokeAsync(eventArgs);
         }
         catch (Exception ex)
         {
@@ -233,6 +265,12 @@
     {
         _cts?.Cancel();
         _cts?.Dispose();
+    }
+
+    public class EventCallbackArgs
+    {
+        public IBrowserFile File { get; set; }
+        public string ObjectKey { get; set; }
     }
 
 }

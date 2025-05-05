@@ -8,7 +8,38 @@ public class ObjectStorageService(IHttpClientFactory clientFactor, ILogger<Objec
 {
     private readonly HttpClient _httpClient = clientFactor.CreateClient();
 
-    public async Task<(bool, IDictionary<int, string>)> UploadFile(
+    public async Task<bool> UploadFile(Stream fileStream, string contentType, string fileName, string preSignedUrl,
+        IProgress<int> progress = null, CancellationToken cancellationToken = default)
+    {
+        var buffer = ArrayPool<byte>.Shared.Rent((int)fileStream.Length);
+        var success = false;
+
+        try
+        {
+            var bytesRead = await fileStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+            var readOnlyMemory = new ReadOnlyMemory<byte>(buffer, 0, bytesRead);
+
+            using var content = new StreamContent(new MemoryStream(buffer, 0, bytesRead));
+            // Configurar headers para upload
+            content.Headers.Add("x-amz-meta-original-filename", fileName);
+            content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+
+            var response = await _httpClient.PutAsync(preSignedUrl, content, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            progress?.Report(100);
+
+            success = true;
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+
+        return success;
+    }
+
+    public async Task<(bool, IDictionary<int, string>)> UploadFileMultiPart(
         Stream fileStream,
         string contentType,
         string fileName,
@@ -109,18 +140,16 @@ public class ObjectStorageService(IHttpClientFactory clientFactor, ILogger<Objec
         {
             try
             {
-                using (var content = new ByteArrayContent(chunkData.Array, chunkData.Offset, chunkData.Count))
-                {
-                    // Configurar headers para upload parcial
-                    content.Headers.Add("x-amz-meta-original-filename", fileName);
-                    content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+                using var content = new ByteArrayContent(chunkData.Array, chunkData.Offset, chunkData.Count);
+                // Configurar headers para upload parcial
+                content.Headers.Add("x-amz-meta-original-filename", fileName);
+                content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
 
-                    var response = await _httpClient.PutAsync(preSignedUrl, content, cancellationToken);
-                    response.EnsureSuccessStatusCode();
-                    success = true;
-                    var etag = response.Headers.GetValues("ETag");
-                    eTag = etag.FirstOrDefault();
-                }
+                var response = await _httpClient.PutAsync(preSignedUrl, content, cancellationToken);
+                response.EnsureSuccessStatusCode();
+                success = true;
+                var etag = response.Headers.GetValues("ETag");
+                eTag = etag.FirstOrDefault();
             }
             catch (Exception ex) when (retryCount < maxRetries)
             {
