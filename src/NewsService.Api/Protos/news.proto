@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option csharp_namespace = "NewsService.Api";
+
+package NewsServiceApi;
+
+service News {
+  rpc SaveNews (SaveNewsRequest) returns (SaveNewsResponse);
+}
+
+message SaveNewsRequest {
+  string title = 1;
+  string body = 2;
+  SaveNewsFileRequest document = 3;
+  SaveNewsFileRequest image = 4;
+  SaveNewsFileRequest video = 5;
+}
+
+message SaveNewsFileRequest {
+  string fileName = 1;
+  string objectKey = 2;
+}
+
+message SaveNewsResponse {
+  
+}

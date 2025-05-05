@@ -14,6 +14,10 @@ var isHttps = builder.Configuration["DOTNET_LAUNCH_PROFILE"] == "https";
 builder.Services.AddSingleton<ObjectStorageClient>()
     .AddGrpcServiceReference<ObjectStorage.ObjectStorageClient>($"{(isHttps ? "https" : "http")}://newsapi", failureStatus: HealthStatus.Degraded);
 
+builder.Services.AddSingleton<NewsClient>()
+    .AddGrpcServiceReference<News.NewsClient>($"{(isHttps ? "https" : "http")}://newsapi", failureStatus: HealthStatus.Degraded);
+
+
 builder.Services.AddScoped<ObjectStorageService>();
 
 // Add services to the container.

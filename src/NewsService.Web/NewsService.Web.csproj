@@ -22,5 +22,6 @@
 
     <ItemGroup>
         <Protobuf Include="..\NewsService.Api\Protos\objectStorage.proto" GrpcServices="Client" Link="NewsService\Protos\objectStorage.proto" />
+        <Protobuf Include="..\NewsService.Api\Protos\news.proto" GrpcServices="Client" Link="NewsService\Protos\news.proto" />
     </ItemGroup>
 </Project>

@@ -30,6 +30,7 @@ var app = builder.Build();
 app.MapGrpcHealthChecksService();
 
 app.MapGrpcService<ObjectStorageService>();
+app.MapGrpcService<NewsService.Api.Services.NewsService>();
 
 app.MapDefaultEndpoints();
 
