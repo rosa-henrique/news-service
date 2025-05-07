@@ -7,15 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Protobuf Include="Protos\objectStorage.proto" GrpcServices="Server" />
-        <Protobuf Include="Protos\news.proto" GrpcServices="Server" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.2.1" />
-        <PackageReference Include="AWSSDK.S3" Version="3.7.416.21" />
-        <PackageReference Include="Grpc.AspNetCore" Version="2.70.0" />
-        <PackageReference Include="Grpc.AspNetCore.HealthChecks" Version="2.70.0" />
+        <PackageReference Include="AWSSDK.S3" Version="4.0.0.2" />
         <PackageReference Include="MassTransit" Version="8.4.0" />
         <PackageReference Include="MassTransit.RabbitMQ" Version="8.4.0" />
     </ItemGroup>
@@ -23,7 +15,6 @@
     <ItemGroup>
       <ProjectReference Include="..\..\aspire\NewsService.ServiceDefaults\NewsService.ServiceDefaults.csproj" />
       <ProjectReference Include="..\NewsService.Contracts\NewsService.Contracts.csproj" />
-      <ProjectReference Include="..\NewsService.Postgres\NewsService.Postgres.csproj" />
     </ItemGroup>
 
 </Project>

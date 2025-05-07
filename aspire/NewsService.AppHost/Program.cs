@@ -9,12 +9,13 @@ var minioSecretKey = builder.AddParameter("minioSecretKey", secret: true);
 var bucketTemporary = builder.AddParameter("bucketTemporary");
 
 var newsPostgresDb = builder.AddPostgres("postgres")
-                .WithLifetime(ContainerLifetime.Persistent)
-                .AddDatabase("newsdb");
+    .WithLifetime(ContainerLifetime.Persistent)
+    .AddDatabase("newsdb");
 
 var rabbitmq = builder.AddRabbitMQ("rabbitmq")
-                    .WithManagementPlugin()
-                    .WithDataVolume(isReadOnly: false);
+    .WithManagementPlugin(port: 8002)
+    .WithLifetime(ContainerLifetime.Persistent)
+    .WithDataVolume(isReadOnly: false);
 
 var migrationsService = builder.AddProject<Projects.NewsService_Migrations>("migration")
     .WithReference(newsPostgresDb)
@@ -32,6 +33,15 @@ var newsApiResourceBuilder = builder.AddProject<Projects.NewsService_Api>("newsa
     .WaitForCompletion(migrationsService);
 //.WithHttpsHealthCheck("/health");
 //.WithHttpHealthCheck("/health");
+
+builder.AddProject<Projects.NewsService_ProcessFile>("newsprocessfile")
+    .WithEnvironment("MINIO_ACCESS_KEY", minioAccessKey)
+    .WithEnvironment("MINIO_SECRET_KEY", minioSecretKey)
+    .WithEnvironment("BUCKET_TEMPORARY", bucketTemporary)
+    .WithReference(minioContainer)
+    .WithReference(rabbitmq)
+    .WaitFor(minioContainer)
+    .WaitFor(rabbitmq);
 
 builder.AddProject<Projects.NewsService_Web>("newsweb")
     .WithExternalHttpEndpoints()

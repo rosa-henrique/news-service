@@ -1,19 +1,12 @@
-using System.Text.Json.Serialization;
 using Amazon.S3;
 using MassTransit;
-using NewsService.Api.Services;
 using NewsService.Contracts;
-using NewsService.Postgres;
+using NewsService.ProcessFile.Consumers;
 using RabbitMQ.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-
-builder.AddNpgsqlDbContext<NewsDbContext>("newsdb");
-
-builder.Services.AddGrpc();
-builder.Services.AddGrpcHealthChecks();
 
 var minioAccessKey = builder.Configuration.GetValue<string>("MINIO_ACCESS_KEY");
 var minioSecretKey = builder.Configuration.GetValue<string>("MINIO_SECRET_KEY");
@@ -34,31 +27,36 @@ builder.Services.AddMassTransit(busConfigurator =>
 {
     busConfigurator.SetKebabCaseEndpointNameFormatter();
     
+    busConfigurator.AddConsumer<ProcessNewsFilesConsumer>();
+    
     busConfigurator.UsingRabbitMq((context, configurator) =>
     {
         configurator.Host(builder.Configuration.GetConnectionString("rabbitmq"));
         
-        configurator.Message<ProcessNewsFiles>(x =>
-        {
-            x.SetEntityName("file.processing.orchestrator");
-        });
+        configurator.Message<ProcessNewsFiles>(x => x.SetEntityName("file.processing.orchestrator"));
         
         configurator.Publish<ProcessNewsFiles>(x =>
         {
             x.Durable = true; // default: true
+            //x.AutoDelete = true;
             x.ExchangeType = ExchangeType.Fanout;
         });
         
-        //configurator.ConfigureEndpoints(context);
+        configurator.ReceiveEndpoint("process.file", e =>
+        {
+            e.ConfigureConsumeTopology = false; 
+
+            e.Bind("file.processing.orchestrator", s =>
+            {
+                s.ExchangeType = ExchangeType.Fanout;
+            });
+            
+            e.Consumer<ProcessNewsFilesConsumer>(context);
+        });
     });
 });
 
 var app = builder.Build();
-
-app.MapGrpcHealthChecksService();
-
-app.MapGrpcService<ObjectStorageService>();
-app.MapGrpcService<NewsService.Api.Services.NewsService>();
 
 app.MapDefaultEndpoints();
 

@@ -16,6 +16,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsService.Postgres", "src
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsService.Migrations", "src\NewsService.Migrations\NewsService.Migrations.csproj", "{25DCFAFC-DE5B-4DA3-ACEA-AEB42C42C485}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsService.Contracts", "src\NewsService.Contracts\NewsService.Contracts.csproj", "{EB80A607-6502-42CD-AD2A-91276D04707F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsService.ProcessFile", "src\NewsService.ProcessFile\NewsService.ProcessFile.csproj", "{B6339AC5-8802-41C4-B9FC-7AD383C2A88B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,6 +32,8 @@ Global
 		{DC44B9A2-8C38-4498-9832-14DB7B9984C1} = {13F2705F-B63D-4D03-8EA2-7AC5554D9547}
 		{F6490E93-1793-4C76-92BC-9567F3D3C0B0} = {13F2705F-B63D-4D03-8EA2-7AC5554D9547}
 		{25DCFAFC-DE5B-4DA3-ACEA-AEB42C42C485} = {13F2705F-B63D-4D03-8EA2-7AC5554D9547}
+		{EB80A607-6502-42CD-AD2A-91276D04707F} = {13F2705F-B63D-4D03-8EA2-7AC5554D9547}
+		{B6339AC5-8802-41C4-B9FC-7AD383C2A88B} = {13F2705F-B63D-4D03-8EA2-7AC5554D9547}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{31040697-15B9-4B76-A831-80C2FD783E73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -54,5 +60,13 @@ Global
 		{25DCFAFC-DE5B-4DA3-ACEA-AEB42C42C485}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{25DCFAFC-DE5B-4DA3-ACEA-AEB42C42C485}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{25DCFAFC-DE5B-4DA3-ACEA-AEB42C42C485}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB80A607-6502-42CD-AD2A-91276D04707F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB80A607-6502-42CD-AD2A-91276D04707F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB80A607-6502-42CD-AD2A-91276D04707F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB80A607-6502-42CD-AD2A-91276D04707F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6339AC5-8802-41C4-B9FC-7AD383C2A88B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6339AC5-8802-41C4-B9FC-7AD383C2A88B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6339AC5-8802-41C4-B9FC-7AD383C2A88B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6339AC5-8802-41C4-B9FC-7AD383C2A88B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

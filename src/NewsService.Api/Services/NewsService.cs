@@ -1,12 +1,16 @@
+using System.Collections.ObjectModel;
 using Grpc.Core;
 using MassTransit;
+using NewsService.Contracts;
+using NewsService.Contracts.Enums;
 using NewsService.Postgres;
 using NewsService.Postgres.Enums;
 using PostgresModel = NewsService.Postgres.Models;
 
 namespace NewsService.Api.Services;
 
-public class NewsService(IConfiguration configuration, NewsDbContext dbContext, IPublishEndpoint  publishEndpoint) : News.NewsBase
+public class NewsService(IConfiguration configuration, NewsDbContext dbContext, ISendEndpoint sendEndpoint)
+    : News.NewsBase
 {
     private readonly string _bucketTemporary = configuration.GetValue<string>("BUCKET_TEMPORARY")!;
 
@@ -47,16 +51,44 @@ public class NewsService(IConfiguration configuration, NewsDbContext dbContext, 
         dbContext.News.Add(news);
         await dbContext.SaveChangesAsync();
 
-        await publishEndpoint.Publish<Test> (new()
-        {
-            Id = news.Id
-        });
-        
+        await SendToProcess(news);
+
         return new SaveNewsResponse();
     }
-}
 
-public class Test
-{
-    public Guid Id { get; set; }
+    private async Task SendToProcess(PostgresModel.News news)
+    {
+        var files = new List<ProcessFiles>
+        {
+            new (
+                FileId: news.Document.Id,
+                FileType: ProcessFilesTypes.Document,
+                BucketTemporary: _bucketTemporary,
+                TemporaryPath: news.Document.FilePath,
+                PermanentBucket: null,
+                PermanentPath: null,
+                Status: StatusProcessingFile.Pending,
+                ErrorMessage: null),
+            new (
+                FileId: news.Image.Id,
+                FileType: ProcessFilesTypes.Image,
+                BucketTemporary: _bucketTemporary,
+                TemporaryPath: news.Image.FilePath,
+                PermanentBucket: null,
+                PermanentPath: null,
+                Status: StatusProcessingFile.Pending,
+                ErrorMessage: null),
+            new (
+                FileId: news.Video.Id,
+                FileType: ProcessFilesTypes.Video,
+                BucketTemporary: _bucketTemporary,
+                TemporaryPath: news.Video.FilePath,
+                PermanentBucket: null,
+                PermanentPath: null,
+                Status: StatusProcessingFile.Pending,
+                ErrorMessage: null)
+        };
+        
+        await sendEndpoint.Send<ProcessNewsFiles>(new(news.Id, files));
+    }
 }
