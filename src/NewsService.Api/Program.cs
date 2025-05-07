@@ -1,11 +1,12 @@
-//using Minio;
-
 using Amazon.S3;
 using NewsService.Api.Services;
+using NewsService.Postgres;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+
+builder.AddNpgsqlDbContext<NewsDbContext>("newsdb");
 
 builder.Services.AddGrpc();
 builder.Services.AddGrpcHealthChecks();
@@ -35,3 +36,4 @@ app.MapGrpcService<NewsService.Api.Services.NewsService>();
 app.MapDefaultEndpoints();
 
 app.Run();
+

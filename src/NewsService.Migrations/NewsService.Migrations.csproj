@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Worker">
 
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
@@ -7,20 +7,20 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Protobuf Include="Protos\objectStorage.proto" GrpcServices="Server" />
-        <Protobuf Include="Protos\news.proto" GrpcServices="Server" />
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.2.1" />
-        <PackageReference Include="AWSSDK.S3" Version="3.7.416.21" />
-        <PackageReference Include="Grpc.AspNetCore" Version="2.70.0" />
-        <PackageReference Include="Grpc.AspNetCore.HealthChecks" Version="2.70.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.4">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\..\aspire\NewsService.ServiceDefaults\NewsService.ServiceDefaults.csproj" />
       <ProjectReference Include="..\NewsService.Postgres\NewsService.Postgres.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Properties\launchSettings.json" />
     </ItemGroup>
 
 </Project>
