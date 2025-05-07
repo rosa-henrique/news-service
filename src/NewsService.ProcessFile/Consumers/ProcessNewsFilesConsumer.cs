@@ -10,7 +10,7 @@ public class ProcessNewsFilesConsumer : IConsumer<ProcessNewsFiles>
         var news = context.Message;
         
         if(news.CurrentFile < 0)
-            throw new Invalid
+            throw new ArgumentOutOfRangeException("news.CurrentFile");
 
         if (news.CurrentFile >= news.Files.Count)
             return;
