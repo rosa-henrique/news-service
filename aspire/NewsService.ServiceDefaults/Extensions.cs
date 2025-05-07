@@ -71,7 +71,8 @@ public static class Extensions
                               || httpContext.Request.Path.StartsWithSegments(AlivenessEndpointPath))
                     )
                     .AddGrpcClientInstrumentation()
-                    .AddHttpClientInstrumentation();
+                    .AddHttpClientInstrumentation()
+                    .AddSource("MassTransit");
             });
 
         builder.AddOpenTelemetryExporters();

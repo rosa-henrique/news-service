@@ -1,11 +1,12 @@
 using Grpc.Core;
+using MassTransit;
 using NewsService.Postgres;
 using NewsService.Postgres.Enums;
 using PostgresModel = NewsService.Postgres.Models;
 
 namespace NewsService.Api.Services;
 
-public class NewsService(IConfiguration configuration, NewsDbContext dbContext) : News.NewsBase
+public class NewsService(IConfiguration configuration, NewsDbContext dbContext, IPublishEndpoint  publishEndpoint) : News.NewsBase
 {
     private readonly string _bucketTemporary = configuration.GetValue<string>("BUCKET_TEMPORARY")!;
 
@@ -45,7 +46,17 @@ public class NewsService(IConfiguration configuration, NewsDbContext dbContext) 
 
         dbContext.News.Add(news);
         await dbContext.SaveChangesAsync();
+
+        await publishEndpoint.Publish<Test> (new()
+        {
+            Id = news.Id
+        });
         
         return new SaveNewsResponse();
     }
+}
+
+public class Test
+{
+    public Guid Id { get; set; }
 }

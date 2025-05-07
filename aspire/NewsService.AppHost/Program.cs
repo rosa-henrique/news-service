@@ -12,6 +12,10 @@ var newsPostgresDb = builder.AddPostgres("postgres")
                 .WithLifetime(ContainerLifetime.Persistent)
                 .AddDatabase("newsdb");
 
+var rabbitmq = builder.AddRabbitMQ("rabbitmq")
+                    .WithManagementPlugin()
+                    .WithDataVolume(isReadOnly: false);
+
 var migrationsService = builder.AddProject<Projects.NewsService_Migrations>("migration")
     .WithReference(newsPostgresDb)
     .WaitFor(newsPostgresDb);
@@ -22,7 +26,9 @@ var newsApiResourceBuilder = builder.AddProject<Projects.NewsService_Api>("newsa
     .WithEnvironment("BUCKET_TEMPORARY", bucketTemporary)
     .WithReference(minioContainer)
     .WithReference(newsPostgresDb)
+    .WithReference(rabbitmq)
     .WaitFor(minioContainer)
+    .WaitFor(rabbitmq)
     .WaitForCompletion(migrationsService);
 //.WithHttpsHealthCheck("/health");
 //.WithHttpHealthCheck("/health");

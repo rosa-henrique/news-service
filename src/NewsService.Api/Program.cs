@@ -1,4 +1,6 @@
+using System.Text.Json.Serialization;
 using Amazon.S3;
+using MassTransit;
 using NewsService.Api.Services;
 using NewsService.Postgres;
 
@@ -24,6 +26,19 @@ builder.Services.AddScoped<IAmazonS3>(_ =>
     };
 
     return new AmazonS3Client(minioAccessKey, minioSecretKey, s3Config);
+});
+
+builder.Services.AddMassTransit(busConfigurator =>
+{
+    busConfigurator.SetKebabCaseEndpointNameFormatter();
+    
+    busConfigurator.UsingRabbitMq((context, configurator) =>
+    {
+        configurator.Host(builder.Configuration.GetConnectionString("rabbitmq"));
+        
+        
+        configurator.ConfigureEndpoints(context);
+    });
 });
 
 var app = builder.Build();

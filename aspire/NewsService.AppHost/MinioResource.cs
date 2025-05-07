@@ -30,12 +30,13 @@ public static class MinioEngineResourceExtensions
 
         return builder.AddResource(resource)
             .WithImage("minio/minio")
+            .WithImageTag(builder.Configuration["Minio:ImageTag"] ?? "latest")
             .WithHttpEndpoint(port: portConsole ?? 9000, name: MinioEngineResource.ConsoleEndpoint, targetPort: 9000)
             .WithHttpEndpoint(port: portContainer ?? 9001, name: MinioEngineResource.ContainerEndpoint, targetPort: 9001)
-            .WithEnvironment("MINIO_ROOT_USER", "minio")
-            .WithEnvironment("MINIO_ROOT_PASSWORD", "MyS3cr3et!")
-            .WithEnvironment("MINIO_ADDRESS", ":9000")
-            .WithEnvironment("MINIO_CONSOLE_ADDRESS", ":9001")
+            .WithEnvironment("MINIO_ROOT_USER", builder.Configuration["Minio:User"])
+            .WithEnvironment("MINIO_ROOT_PASSWORD", builder.Configuration["Minio:Password"])
+            .WithEnvironment("MINIO_ADDRESS", builder.Configuration["Minio:Port"])
+            .WithEnvironment("MINIO_CONSOLE_ADDRESS", builder.Configuration["Minio:ConsolePort"])
             //.WithVolume("/minio/data")
             .WithLifetime(ContainerLifetime.Persistent)
             .WithArgs("server", "/data");
