@@ -1,3 +1,3 @@
 namespace NewsService.Contracts;
 
-public record ProcessNewsFiles(Guid NewsId, IReadOnlyList<ProcessFiles> Files, int CurrentFile = 0);
+public record ProcessNewsFiles(Guid NewsId, IReadOnlyList<ProcessFiles> Files, int CurrentFile = 0, bool FolderCreated = false);

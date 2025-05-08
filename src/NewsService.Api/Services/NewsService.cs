@@ -9,7 +9,7 @@ using PostgresModel = NewsService.Postgres.Models;
 
 namespace NewsService.Api.Services;
 
-public class NewsService(IConfiguration configuration, NewsDbContext dbContext, ISendEndpoint sendEndpoint)
+public class NewsService(IConfiguration configuration, NewsDbContext dbContext, IPublishEndpoint publishEndpoint)
     : News.NewsBase
 {
     private readonly string _bucketTemporary = configuration.GetValue<string>("BUCKET_TEMPORARY")!;
@@ -89,6 +89,6 @@ public class NewsService(IConfiguration configuration, NewsDbContext dbContext, 
                 ErrorMessage: null)
         };
         
-        await sendEndpoint.Send<ProcessNewsFiles>(new(news.Id, files));
+        await publishEndpoint.Publish<ProcessNewsFiles>(new(news.Id, files));
     }
 }

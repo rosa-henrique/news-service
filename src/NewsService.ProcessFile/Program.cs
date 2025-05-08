@@ -1,7 +1,10 @@
 using Amazon.S3;
 using MassTransit;
 using NewsService.Contracts;
+using NewsService.Contracts.Enums;
 using NewsService.ProcessFile.Consumers;
+using NewsService.ProcessFile.FilesProcessors;
+using NewsService.ProcessFile.Service;
 using RabbitMQ.Client;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,28 +36,21 @@ builder.Services.AddMassTransit(busConfigurator =>
     {
         configurator.Host(builder.Configuration.GetConnectionString("rabbitmq"));
         
-        configurator.Message<ProcessNewsFiles>(x => x.SetEntityName("file.processing.orchestrator"));
-        
         configurator.Publish<ProcessNewsFiles>(x =>
         {
             x.Durable = true; // default: true
-            //x.AutoDelete = true;
             x.ExchangeType = ExchangeType.Fanout;
         });
         
-        configurator.ReceiveEndpoint("process.file", e =>
-        {
-            e.ConfigureConsumeTopology = false; 
-
-            e.Bind("file.processing.orchestrator", s =>
-            {
-                s.ExchangeType = ExchangeType.Fanout;
-            });
-            
-            e.Consumer<ProcessNewsFilesConsumer>(context);
-        });
+        configurator.ConfigureEndpoints(context);
     });
 });
+
+builder.Services.AddTransient<IFileProcessorFactory, FileProcessorFactory>();
+builder.Services.AddScoped<FileProcessingService>();
+builder.Services.AddKeyedTransient<IFileProcessor, DocumentFileProcessor>(nameof(ProcessFilesTypes.Document));
+builder.Services.AddKeyedTransient<IFileProcessor, ImageFileProcessor>(nameof(ProcessFilesTypes.Image));
+builder.Services.AddKeyedTransient<IFileProcessor, VideoFileProcessor>(nameof(ProcessFilesTypes.Video));
 
 var app = builder.Build();
 

@@ -38,18 +38,13 @@ builder.Services.AddMassTransit(busConfigurator =>
     {
         configurator.Host(builder.Configuration.GetConnectionString("rabbitmq"));
         
-        configurator.Message<ProcessNewsFiles>(x =>
-        {
-            x.SetEntityName("file.processing.orchestrator");
-        });
-        
         configurator.Publish<ProcessNewsFiles>(x =>
         {
             x.Durable = true; // default: true
             x.ExchangeType = ExchangeType.Fanout;
         });
         
-        //configurator.ConfigureEndpoints(context);
+        configurator.ConfigureEndpoints(context);
     });
 });
 

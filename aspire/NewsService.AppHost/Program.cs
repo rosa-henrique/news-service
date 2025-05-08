@@ -7,6 +7,7 @@ var minioContainer = builder.AddMinioEngine("minio");
 var minioAccessKey = builder.AddParameter("minioAccessKey", secret: true);
 var minioSecretKey = builder.AddParameter("minioSecretKey", secret: true);
 var bucketTemporary = builder.AddParameter("bucketTemporary");
+var bucketPermanent = builder.AddParameter("bucketPermanent");
 
 var newsPostgresDb = builder.AddPostgres("postgres")
     .WithLifetime(ContainerLifetime.Persistent)
@@ -38,6 +39,7 @@ builder.AddProject<Projects.NewsService_ProcessFile>("newsprocessfile")
     .WithEnvironment("MINIO_ACCESS_KEY", minioAccessKey)
     .WithEnvironment("MINIO_SECRET_KEY", minioSecretKey)
     .WithEnvironment("BUCKET_TEMPORARY", bucketTemporary)
+    .WithEnvironment("BUCKET_PERMANENT", bucketPermanent)
     .WithReference(minioContainer)
     .WithReference(rabbitmq)
     .WaitFor(minioContainer)
