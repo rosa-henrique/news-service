@@ -1,7 +1,10 @@
 using System.Collections.Concurrent;
 using Elastic.Clients.Elasticsearch;
+using Microsoft.EntityFrameworkCore;
 using NewsService.Contracts;
 using NewsService.Contracts.Enums;
+using NewsService.Postgres;
+using NewsService.Postgres.Enums;
 using NewsService.SyncDatabase.Models;
 
 namespace NewsService.SyncDatabase.Services;
@@ -11,7 +14,7 @@ public interface ISyncDatabasesService
     Task ProcessMessage(ProcessNewsFiles news);
 }
 
-public class SyncDatabasesService(ElasticsearchClient elasticClient) : ISyncDatabasesService
+public class SyncDatabasesService(ElasticsearchClient elasticClient, NewsDbContext dbContext) : ISyncDatabasesService
 {
     //private static ConcurrentDictionary<Guid, object> _lockObjects = new ConcurrentDictionary<Guid, object>();
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> _semaphores = new();
@@ -45,6 +48,7 @@ public class SyncDatabasesService(ElasticsearchClient elasticClient) : ISyncData
             {
                 tasks.Add(UpdateNewsState(news));
                 tasks.Add(SaveAudit(news.NewsId, news.Files.Last()));
+                tasks.Add(UpdateStatusFiles(news.Files));
             }
             else
             {
@@ -127,6 +131,42 @@ public class SyncDatabasesService(ElasticsearchClient elasticClient) : ISyncData
         var response = await elasticClient.IndexAsync(audit, idx => idx.Index("news_state_audit"));
 
         if (!response.IsValidResponse)
-            throw new InvalidOperationException("Save NewsState with errors");
+            throw new InvalidOperationException("Save NewsStateAudit with errors");
     }
+
+    private async Task UpdateStatusFiles(IReadOnlyList<ProcessFiles> files)
+    {
+        foreach (var file in files)
+        {
+            var newStatus = file.Status switch
+            {
+                StatusProcessingFile.Failed => StatusFile.Failed,
+                _ => StatusFile.Completed
+            };
+
+            switch (file.FileType)
+            {
+                case ProcessFilesTypes.Document:
+                    await dbContext.NewsDocumentsFiles.Where(nf => nf.Id == file.FileId)
+                        .ExecuteUpdateAsync(u => u.SetProperty(p => p.ErrorMessage, file.ErrorMessage)
+                            .SetProperty(p => p.ProcessedAt, DateTime.UtcNow)
+                            .SetProperty(p => p.Status, newStatus));
+                    break;
+                case ProcessFilesTypes.Image:
+                    await dbContext.NewsImagesFiles.Where(nf => nf.Id == file.FileId)
+                        .ExecuteUpdateAsync(u => u.SetProperty(p => p.ErrorMessage, file.ErrorMessage)
+                            .SetProperty(p => p.ProcessedAt, DateTime.UtcNow)
+                            .SetProperty(p => p.Status, newStatus));
+                    break;
+                case ProcessFilesTypes.Video:
+                    await dbContext.NewsVideosFiles.Where(nf => nf.Id == file.FileId)
+                        .ExecuteUpdateAsync(u => u.SetProperty(p => p.ErrorMessage, file.ErrorMessage)
+                            .SetProperty(p => p.ProcessedAt, DateTime.UtcNow)
+                            .SetProperty(p => p.Status, newStatus));
+                    break;
+            }
+        }
+    }
+    
+    
 }

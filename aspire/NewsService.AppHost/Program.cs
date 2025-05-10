@@ -11,6 +11,7 @@ var bucketPermanent = builder.AddParameter("bucketPermanent");
 
 var newsPostgresDb = builder.AddPostgres("postgres")
     .WithLifetime(ContainerLifetime.Persistent)
+    .WithPgAdmin(pgAdmin => pgAdmin.WithHostPort(5050))
     .AddDatabase("newsdb");
 
 var elasticsearch = builder.AddElasticsearch("newsElasticsearch")
