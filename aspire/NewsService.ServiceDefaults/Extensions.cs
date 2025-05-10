@@ -72,6 +72,7 @@ public static class Extensions
                     )
                     .AddGrpcClientInstrumentation()
                     .AddHttpClientInstrumentation()
+                    .AddEntityFrameworkCoreInstrumentation()
                     .AddSource("MassTransit");
             });
 

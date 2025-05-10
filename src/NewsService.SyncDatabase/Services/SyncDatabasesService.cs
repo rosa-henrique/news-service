@@ -144,25 +144,34 @@ public class SyncDatabasesService(ElasticsearchClient elasticClient, NewsDbConte
                 _ => StatusFile.Completed
             };
 
+            var permanentBucket = file.Status == StatusProcessingFile.Completed ? file.PermanentBucket : null;
+            var permanentPathFile = file.Status == StatusProcessingFile.Completed ? file.PermanentPath : null;
+
             switch (file.FileType)
             {
                 case ProcessFilesTypes.Document:
                     await dbContext.NewsDocumentsFiles.Where(nf => nf.Id == file.FileId)
                         .ExecuteUpdateAsync(u => u.SetProperty(p => p.ErrorMessage, file.ErrorMessage)
                             .SetProperty(p => p.ProcessedAt, DateTime.UtcNow)
-                            .SetProperty(p => p.Status, newStatus));
+                            .SetProperty(p => p.Status, newStatus)
+                            .SetProperty(p => p.Bucket, permanentBucket)
+                            .SetProperty(p => p.FilePath, permanentPathFile));
                     break;
                 case ProcessFilesTypes.Image:
                     await dbContext.NewsImagesFiles.Where(nf => nf.Id == file.FileId)
                         .ExecuteUpdateAsync(u => u.SetProperty(p => p.ErrorMessage, file.ErrorMessage)
                             .SetProperty(p => p.ProcessedAt, DateTime.UtcNow)
-                            .SetProperty(p => p.Status, newStatus));
+                            .SetProperty(p => p.Status, newStatus)
+                            .SetProperty(p => p.Bucket, permanentBucket)
+                            .SetProperty(p => p.FilePath, permanentPathFile));
                     break;
                 case ProcessFilesTypes.Video:
                     await dbContext.NewsVideosFiles.Where(nf => nf.Id == file.FileId)
                         .ExecuteUpdateAsync(u => u.SetProperty(p => p.ErrorMessage, file.ErrorMessage)
                             .SetProperty(p => p.ProcessedAt, DateTime.UtcNow)
-                            .SetProperty(p => p.Status, newStatus));
+                            .SetProperty(p => p.Status, newStatus)
+                            .SetProperty(p => p.Bucket, permanentBucket)
+                            .SetProperty(p => p.FilePath, permanentPathFile));
                     break;
             }
         }
