@@ -13,6 +13,9 @@ var newsPostgresDb = builder.AddPostgres("postgres")
     .WithLifetime(ContainerLifetime.Persistent)
     .AddDatabase("newsdb");
 
+var elasticsearch = builder.AddElasticsearch("newsElasticsearch")
+    .WithLifetime(ContainerLifetime.Persistent);
+
 var rabbitmq = builder.AddRabbitMQ("rabbitmq")
     .WithManagementPlugin(port: 8002)
     .WithLifetime(ContainerLifetime.Persistent)
@@ -21,6 +24,7 @@ var rabbitmq = builder.AddRabbitMQ("rabbitmq")
 var migrationsService = builder.AddProject<Projects.NewsService_Migrations>("migration")
     .WithReference(newsPostgresDb)
     .WaitFor(newsPostgresDb);
+
 
 var newsApiResourceBuilder = builder.AddProject<Projects.NewsService_Api>("newsapi")
     .WithEnvironment("MINIO_ACCESS_KEY", minioAccessKey)
@@ -50,5 +54,12 @@ builder.AddProject<Projects.NewsService_Web>("newsweb")
     .WithReference(newsApiResourceBuilder)
     .WaitFor(newsApiResourceBuilder);
 
+builder.AddProject<Projects.NewsService_SyncDatabase>("newsSyncDatabase")
+    .WithReference(newsPostgresDb)
+    .WithReference(elasticsearch)
+    .WithReference(rabbitmq)
+    .WaitFor(elasticsearch)
+    .WaitFor(rabbitmq)
+    .WaitForCompletion(migrationsService);
 
 builder.Build().Run();

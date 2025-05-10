@@ -12,6 +12,7 @@
 
     <ItemGroup>
         <PackageReference Include="Aspire.Hosting.AppHost" Version="9.2.1"/>
+        <PackageReference Include="Aspire.Hosting.Elasticsearch" Version="9.2.1-preview.1.25222.1" />
         <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="9.2.1" />
         <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="9.2.1" />
     </ItemGroup>
@@ -20,6 +21,7 @@
       <ProjectReference Include="..\..\src\NewsService.Api\NewsService.Api.csproj" />
       <ProjectReference Include="..\..\src\NewsService.Migrations\NewsService.Migrations.csproj" />
       <ProjectReference Include="..\..\src\NewsService.ProcessFile\NewsService.ProcessFile.csproj" />
+      <ProjectReference Include="..\..\src\NewsService.SyncDatabase\NewsService.SyncDatabase.csproj" />
       <ProjectReference Include="..\..\src\NewsService.Web\NewsService.Web.csproj" />
     </ItemGroup>
 

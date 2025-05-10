@@ -47,7 +47,7 @@ builder.Services.AddMassTransit(busConfigurator =>
 });
 
 builder.Services.AddTransient<IFileProcessorFactory, FileProcessorFactory>();
-builder.Services.AddScoped<FileProcessingService>();
+builder.Services.AddScoped<IFileProcessingService, FileProcessingService>();
 builder.Services.AddKeyedTransient<IFileProcessor, DocumentFileProcessor>(nameof(ProcessFilesTypes.Document));
 builder.Services.AddKeyedTransient<IFileProcessor, ImageFileProcessor>(nameof(ProcessFilesTypes.Image));
 builder.Services.AddKeyedTransient<IFileProcessor, VideoFileProcessor>(nameof(ProcessFilesTypes.Video));

@@ -5,10 +5,13 @@ using NewsService.ProcessFile.Service;
 
 namespace NewsService.ProcessFile.Consumers;
 
-public class ProcessNewsFilesConsumer(FileProcessingService fileProcessingService) : IConsumer<ProcessNewsFiles>
+public class ProcessNewsFilesConsumer(IFileProcessingService fileProcessingService) : IConsumer<ProcessNewsFiles>
 {
     public async Task Consume(ConsumeContext<ProcessNewsFiles> context)
     {
-       await fileProcessingService.ProcessFile(context.Message);
+        if (context.Message.CurrentFile >= context.Message.Files.Count)
+            return;
+        
+        await fileProcessingService.ProcessFile(context.Message);
     }
 }
